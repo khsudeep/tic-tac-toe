@@ -17,9 +17,14 @@
 * 
 */
 
+
+var interval
+const INTERVAL_IN_SECONDS=100;
 const grid = [];
-const GRID_LENGTH = 3;
-let turn = 'X';
+const GRID_LENGTH = 7;
+let compTurnSymbol='0'
+let HumanTurnSymbol='X'
+let turn = HumanTurnSymbol;
 var countMoves = 0; 
 function initializeGrid() {
     countMoves = 0;
@@ -30,6 +35,21 @@ function initializeGrid() {
         }
         grid.push(tempArray);
     }
+}
+
+function setTimerForHuman() {
+	var seconds_left = INTERVAL_IN_SECONDS;
+	interval = setInterval(function() {
+		document.getElementById('timerId').innerHTML = "Your Turn: "+--seconds_left;
+
+		if (seconds_left <= 0)
+		{
+			//document.getElementById('timerId').innerHTML = 'You are ready';
+			clearInterval(interval);
+			declareCompAsWinner();
+
+		}
+	}, 1000);
 }
 
 function getRowBoxes(colIdx) {
@@ -44,10 +64,10 @@ function getRowBoxes(colIdx) {
         }
         const gridValue = grid[colIdx][rowIdx];
         if(gridValue === 1) {
-            content = '<span class="cross">X</span>';
+            content = '<span class="cross">'+HumanTurnSymbol+'</span>';
         }
         else if (gridValue === 2) {
-            content = '<span class="cross">O</span>';
+            content = '<span class="cross">'+compTurnSymbol+'</span>';
         }
         rowDivs = rowDivs + '<div colIdx="'+ colIdx +'" rowIdx="' + rowIdx + '" class="box ' +
             additionalClass + '">' + content + '</div>';
@@ -72,15 +92,16 @@ function renderMainGrid() {
 }
 
 function onBoxClick() {
+	clearInterval(interval);
     var rowIdx = this.getAttribute("rowIdx");
     var colIdx = this.getAttribute("colIdx");
     
     let newValue = 1;
-     if(turn=='0') {
-	turn = 'X';
-	newValue = 2;
+     if(turn==compTurnSymbol) {
+		turn = HumanTurnSymbol;
+		newValue = 2;
     } else {
-	turn = '0';
+	turn = compTurnSymbol;
     }
     grid[colIdx][rowIdx] = newValue;
     countMoves++;
@@ -109,7 +130,7 @@ function checkResult() {
 }
 
 function isDraw() {
-	if(countMoves>=9)
+	if(countMoves>=(GRID_LENGTH*GRID_LENGTH))
 		return true;
 	return false;
 }
@@ -125,46 +146,99 @@ function declareWinner() {
 }
 
 function swapTurn() {
-	if(turn=='X')
-		turn='0';
+	if(turn==HumanTurnSymbol)
+		turn=compTurnSymbol;
 	else
-		turn='X';
+		turn=HumanTurnSymbol;
 	return turn;
 }
 
+
 function checkRowResults() {
+	var foundFailure = false;
 	for(let i=0;i<GRID_LENGTH;i++) {
-		if((grid[i][0] == grid[i][1]) &&
-			(grid[i][1] == grid[i][2]) &&
-			(grid[i][0] != 0)) {
+		foundFailure = false;
+		var firstValue = grid[i][0];
+		if(firstValue==0) {
+			foundFailure = true;
+			continue;
+		}
+		for(let j=1;j<GRID_LENGTH;j++) {
+			if((grid[i][j]==0) || (grid[i][j]!=firstValue)) {
+				j=GRID_LENGTH;
+				foundFailure=true;
+				continue;
+			}
+		}
+		if(!foundFailure) {
 			return true;
 		}
 	}
+
+
+	if(!foundFailure)
+		return true;
+
 	return false;	
 }
 
 function checkColumnResults() {
+	var foundFailure = false;
 	for(let i=0;i<GRID_LENGTH;i++) {
-		if((grid[0][i] == grid[1][i]) &&
-			(grid[1][i] == grid[2][i]) &&
-			(grid[0][i] != 0)) {
+		foundFailure = false;
+		var firstValue = grid[0][i];
+		if(firstValue==0) {
+			foundFailure = true;
+			continue;
+		}
+		for(let j=1;j<GRID_LENGTH;j++) {
+			if((grid[j][i]==0) || (grid[j][i]!=firstValue)) {
+				j=GRID_LENGTH;
+				foundFailure=true;
+				continue;
+			}
+		}
+		if(!foundFailure) {
 			return true;
 		}
 	}
-	return false;
-	
+
+
+	if(!foundFailure)
+		return true;
+
+	return false;	
 }
 
 function checkDiagonalResults() {
-	if((grid[0][0] == grid[1][1]) &&
-		(grid[1][1] == grid[2][2]) &&
-		(grid[0][0] != 0)) {
+	var firstValue = grid[0][0];
+	var foundFailure = false;
+	for(let i=0;i<GRID_LENGTH;i++) {
+		if(grid[i][i]==0) {
+			foundFailure=true;
+			break;
+		}
+		if(grid[i][i]!=firstValue){
+			foundFailure=true;
+			break;
+		}
+	}
+	if(!foundFailure) {
 		return true;
 	}
-
-	if((grid[0][2] == grid[1][1]) &&
-		(grid[1][1] == grid[2][0]) &&
-		(grid[0][2] != 0)) {
+	foundFailure = false;
+	firstValue = grid[GRID_LENGTH-1][GRID_LENGTH-1];
+	for(let i=GRID_LENGTH-1;i>=0;i--) {
+		if(grid[i][i]==0) {
+			foundFailure=true;
+			break;
+		}
+		if(grid[i][i]!=firstValue){
+			foundFailure=true;
+			break;
+		}
+	}
+	if(!foundFailure) {
 		return true;
 	}
 	return false;
@@ -172,20 +246,26 @@ function checkDiagonalResults() {
 
 function compTurn() {
 	
-	let rand = Math.floor(Math.random()*9);
+	let rand = Math.floor(Math.random()*(GRID_LENGTH*GRID_LENGTH));
 	if(countMoves<GRID_LENGTH*GRID_LENGTH) {
-	while(grid[Math.floor(rand/3)][rand%3]!=0)
-		rand = Math.floor(Math.random()*9);
-	grid[Math.floor(rand/3)][rand%3]=2;
+	while(grid[Math.floor(rand/GRID_LENGTH)][rand%GRID_LENGTH]!=0)
+		rand = Math.floor(Math.random()*(GRID_LENGTH*GRID_LENGTH));
+	grid[Math.floor(rand/GRID_LENGTH)][rand%GRID_LENGTH]=2;
 	countMoves++;
     renderMainGrid();
     addClickHandlers();
     swapTurn();
     setTimeout(function(){checkResult();},20);
-    checkResult();
+		setTimerForHuman();
 }
 }
 
+function declareCompAsWinner() {
+	alert("You Lost: "+"Hiver Computer won this");
+	location.reload();
+}
+
+setTimerForHuman();
 initializeGrid();
 renderMainGrid();
 addClickHandlers();
